@@ -12,7 +12,7 @@
 ========         ||                    ||   |-----|          ========
 ========         ||:Tutor              ||   |:::::|          ========
 ========         |'-..................-'|   |____o|          ========
-========         `"")----------------(""`   ___________      ========
+=======         `"")----------------(""`   ___________      ========
 ========        /::::::::::|  |::::::::::\  \ no mouse \     ========
 ========       /:::========|  |==hjkl==:::\  \ required \    ========
 ========      '""""""""""""'  '""""""""""""'  '""""""""""'   ========
@@ -40,7 +40,7 @@ What is Kickstart?
     reference for how Neovim integrates Lua.
     - :help lua-guide
     - (or HTML version): https://neovim.io/doc/user/lua-guide.html
-
+ 
 Kickstart Guide:
 
   TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
@@ -52,8 +52,8 @@ Kickstart Guide:
       - <enter key>
 
     (If you already know the Neovim basics, you can skip this step.)
-
-  Once you've completed that, you can continue working through **AND READING** the rest
+ 
+  Once you've completed that, you can continue working through **AND READING** the rest 
   of the kickstart init.lua.
 
   Next, run AND READ `:help`.
@@ -624,7 +624,151 @@ require('lazy').setup({
       }
     end,
   },
+  {
+    'stevearc/dressing.nvim',
+    opts = {},
+  },
+  -- nvim v0.8.0
+  {
+    'kdheepak/lazygit.nvim',
+    cmd = {
+      'LazyGit',
+      'LazyGitConfig',
+      'LazyGitCurrentFile',
+      'LazyGitFilter',
+      'LazyGitFilterCurrentFile',
+    },
+    -- optional for floating window border decoration
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+    },
+    -- setting the keybinding for LazyGit with 'keys' is recommended in
+    -- order to load the plugin when the command is run for the first time
+    keys = {
+      { '<leader>gl', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
+    },
+  },
+  {
+    'akinsho/flutter-tools.nvim',
+    ft = { 'dart' },
+    requires = {
+      'nvim-lua/plenary.nvim',
+    },
+    opts = {
+      ui = {
+        border = 'rounded',
+      },
+      decorations = {
+        statusline = {
+          device = true,
+        },
+      },
+      debugger = {
+        enabled = true,
+        run_via_dap = false,
+        exception_breakpoints = { 'raised', 'uncaught' },
+        register_configurations = function(_)
+          require('dap').configurations.dart = {
+            {
+              type = 'dart',
+              request = 'launch',
+              name = 'Debug on Chrome',
+              program = '${file}',
+              cwd = '${workspaceFolder}',
+              toolArgs = { '-d', 'chrome' },
+              args = { '--web-port=5000' },
+              deviceId = 'chrome',
+              flutterMode = 'debug',
+            },
+            {
+              type = 'dart',
+              request = 'launch',
+              name = 'Debug',
+              program = '${file}',
+              cwd = '${workspaceFolder}',
+              flutterMode = 'debug',
+            },
+          }
+        end,
+      },
+      fvm = true,
+      dev_log = {
+        enabled = true,
+        open_cmd = 'tabedit',
+      },
+      lsp = {
+        color = {
+          enabled = true,
+          background = false,
+          foreground = false,
+          virtual_text = true,
+          virtual_text_str = '■',
+        },
+        settings = {
+          onlyAnalyzeProjectsWithOpenFiles = true,
+          analysisExcludedFolders = { vim.fn.expand '$HOME/flutter/.pub-cache' },
+          lineLength = 100,
+          completeFunctionCalls = true,
+          showTodos = true,
+          renameFilesWithClasses = 'always',
+          enableSnippets = true,
+        },
+      },
+    },
+    config = function(_, opts)
+      local map = vim.keymap.set
+      require('flutter-tools').setup(opts)
+      require('telescope').load_extension 'flutter'
 
+      map('n', '<leader>sc', '<cmd>Telescope flutter commands<cr>', { desc = 'Flutter commands' })
+      map('n', '<localleader>a', '<cmd>FlutterReanalyze<cr>', { desc = 'Flutter reanalyze' })
+      map('n', '<localleader>d', '<cmd>FlutterDevices<cr>', { desc = 'Flutter devices' })
+      map('n', '<localleader>D', function()
+        local lazy = require 'flutter-tools.lazy'
+        local config = lazy.require 'flutter-tools.config'
+        local notify = require 'notify'
+        local run_via_dap = not config.debugger.run_via_dap
+        local dev_log_enabled = not config.dev_log.enabled
+        config.debugger.run_via_dap = run_via_dap
+        config.dev_log.enabled = dev_log_enabled
+        if run_via_dap then
+          notify('Run via DAP enabled', 'info', { title = 'Flutter Tools' })
+        else
+          notify('Run via DAP disabled', 'info', { title = 'Flutter Tools' })
+        end
+      end, { desc = 'Flutter toggle run via DAP' })
+      map('n', '<localleader>e', '<cmd>FlutterEmulators<cr>', { desc = 'Flutter emulators' })
+      map('n', '<localleader>o', '<cmd>FlutterOutlineOpen<cr>', { desc = 'Flutter outline open' })
+      map('n', '<localleader>l', ':tabedit | buffer __FLUTTER_DEV_LOG__<CR>', { desc = 'Flutter logs' })
+      map('n', '<localleader>L', '<cmd>FlutterLspRestart<cr>', { desc = 'Flutter lsp restart' })
+      map('n', '<localleader>p', '<cmd>FlutterCopyProfilerUrl<cr>', { desc = 'Flutter copy profiler url' })
+      map('n', '<localleader>q', '<cmd>FlutterQuit<cr>', { desc = 'Flutter quit' })
+      map('n', '<localleader>r', function()
+        local commands = require 'flutter-tools.commands'
+        if commands.is_running() then
+          commands.reload(false)
+        else
+          commands.run {}
+        end
+      end, { desc = 'Flutter run/reload' })
+      map('n', '<localleader>R', '<cmd>FlutterRestart<cr>', { desc = 'Flutter restart' })
+      map('n', '<localleader>t', '<cmd>FlutterOutlineToggle<cr>', { desc = 'Flutter outline toggle' })
+      map('n', '<localleader>v', '<cmd>FlutterDevTools<cr>', { desc = 'Flutter dev tools' })
+      map('n', '<localleader>V', '<cmd>FlutterDevToolsActivate<cr>', { desc = 'Flutter dev tools activate' })
+      map('n', '<localleader>s', '<cmd>FlutterSuper<cr>', { desc = 'Flutter super' })
+      map('n', '<localleader>n', '<cmd>FlutterRename<cr>', { desc = 'Flutter rename' })
+    end,
+  },
+  {
+    'Exafunction/codeium.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'hrsh7th/nvim-cmp',
+    },
+    config = function()
+      require('codeium').setup {}
+    end,
+  },
   { -- Autoformat
     'stevearc/conform.nvim',
     lazy = false,
@@ -652,6 +796,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        dart = { 'dart format' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -768,6 +913,7 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          { name = 'codeium' },
         },
       }
     end,
